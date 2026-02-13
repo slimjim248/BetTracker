@@ -2,12 +2,13 @@ import type { SportsApiGame, ApiRegion, ApiMarket } from '../types/sportsApi';
 
 const API_BASE_URL = 'https://api.the-odds-api.com/v4';
 const API_KEY_STORAGE_KEY = 'sportsApiKey';
+const ENV_API_KEY = import.meta.env.VITE_ODDS_API_KEY as string | undefined;
 
 /**
- * Get stored API key from localStorage
+ * Get API key - checks environment variable first, then localStorage
  */
 export function getApiKey(): string | null {
-  return localStorage.getItem(API_KEY_STORAGE_KEY);
+  return ENV_API_KEY || localStorage.getItem(API_KEY_STORAGE_KEY);
 }
 
 /**
