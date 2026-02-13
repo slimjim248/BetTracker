@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Lightbulb, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import { useBets, useBettingStats } from '../../hooks/useBets';
-import { getAllRecommendations } from '../../utils/bettingStrategies';
+import { Lightbulb, AlertTriangle, CheckCircle, Info, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { useBets, useBettingStats, oddsToImpliedProbability } from '../../hooks/useBets';
+import { getAllRecommendations, calculateExpectedValue } from '../../utils/bettingStrategies';
 
 const RISK_LEVEL_CONFIG = {
   low: {
@@ -133,6 +133,16 @@ export default function StrategyRecommendations() {
         </div>
       </div>
 
+      {/* Quick Verdict */}
+      {oddsNum !== 0 && bankrollNum > 0 && (
+        <QuickVerdict
+          bankroll={bankrollNum}
+          odds={oddsNum}
+          winProbability={winProbNum > 0 ? winProbNum / 100 : undefined}
+          confidence={confidence}
+        />
+      )}
+
       {/* Recommendations */}
       <div className="space-y-4">
         <h3 className="font-medium text-gray-900 mb-3">
@@ -215,6 +225,151 @@ export default function StrategyRecommendations() {
             <strong>6. Focus on value:</strong> Bet when you think the odds are better than
             they should be, not just on your favorite team.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickVerdict({
+  bankroll,
+  odds,
+  winProbability,
+  confidence,
+}: {
+  bankroll: number;
+  odds: number;
+  winProbability?: number;
+  confidence: number;
+}) {
+  const impliedProb = oddsToImpliedProbability(odds);
+  const betPercentage = confidence; // 1-5% based on confidence
+  const recommendedBet = bankroll * (betPercentage / 100);
+
+  // Determine if user has an edge (their probability vs implied)
+  const hasUserProb = winProbability !== undefined && winProbability > 0 && winProbability < 1;
+  const edge = hasUserProb ? winProbability - impliedProb : undefined;
+  const hasEdge = edge !== undefined && edge > 0;
+
+  // Calculate EV if we have win probability
+  const ev = hasUserProb
+    ? calculateExpectedValue(recommendedBet, odds, winProbability)
+    : undefined;
+
+  // Determine verdict
+  let verdict: 'recommended' | 'caution' | 'skip';
+  let verdictLabel: string;
+  let verdictDescription: string;
+
+  if (hasUserProb && ev) {
+    if (ev.isPositiveEv && hasEdge) {
+      verdict = 'recommended';
+      verdictLabel = 'Bet Recommended';
+      verdictDescription = `You have a ${(edge! * 100).toFixed(1)}% edge over the implied odds. This is a +EV bet.`;
+    } else if (ev.isPositiveEv || (edge !== undefined && edge > -0.02)) {
+      verdict = 'caution';
+      verdictLabel = 'Proceed with Caution';
+      verdictDescription = 'This bet is borderline. The edge is slim, so size conservatively.';
+    } else {
+      verdict = 'skip';
+      verdictLabel = 'Skip This Bet';
+      verdictDescription = `The implied probability (${(impliedProb * 100).toFixed(1)}%) exceeds your estimated win chance (${(winProbability * 100).toFixed(1)}%). Negative EV.`;
+    }
+  } else {
+    // No win probability provided - give neutral advice based on confidence
+    if (confidence >= 4) {
+      verdict = 'caution';
+      verdictLabel = 'High Confidence Play';
+      verdictDescription = 'You feel good about this one. Enter your win probability for a more precise verdict.';
+    } else if (confidence >= 2) {
+      verdict = 'caution';
+      verdictLabel = 'Standard Play';
+      verdictDescription = 'Moderate confidence. Add your estimated win probability for an EV-based recommendation.';
+    } else {
+      verdict = 'skip';
+      verdictLabel = 'Low Confidence - Consider Skipping';
+      verdictDescription = 'Your confidence is low. Only bet small or skip entirely.';
+    }
+  }
+
+  const verdictConfig = {
+    recommended: {
+      bg: 'bg-gradient-to-br from-green-50 to-emerald-50',
+      border: 'border-green-400',
+      iconBg: 'bg-green-500',
+      textColor: 'text-green-900',
+      labelColor: 'text-green-700',
+      Icon: ThumbsUp,
+    },
+    caution: {
+      bg: 'bg-gradient-to-br from-yellow-50 to-amber-50',
+      border: 'border-yellow-400',
+      iconBg: 'bg-yellow-500',
+      textColor: 'text-yellow-900',
+      labelColor: 'text-yellow-700',
+      Icon: Minus,
+    },
+    skip: {
+      bg: 'bg-gradient-to-br from-red-50 to-rose-50',
+      border: 'border-red-400',
+      iconBg: 'bg-red-500',
+      textColor: 'text-red-900',
+      labelColor: 'text-red-700',
+      Icon: ThumbsDown,
+    },
+  };
+
+  const config = verdictConfig[verdict];
+  const VerdictIcon = config.Icon;
+
+  return (
+    <div className={`${config.bg} border-2 ${config.border} rounded-lg p-5 mb-6`}>
+      <div className="flex items-start gap-4">
+        <div className={`${config.iconBg} p-3 rounded-full`}>
+          <VerdictIcon className="w-6 h-6 text-white" />
+        </div>
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className={`text-lg font-bold ${config.textColor}`}>{verdictLabel}</h3>
+              <p className={`text-sm ${config.labelColor}`}>{verdictDescription}</p>
+            </div>
+            <div className="text-right ml-4">
+              <div className="text-xs text-gray-500">Recommended Bet</div>
+              <div className={`text-3xl font-bold ${config.textColor}`}>
+                ${recommendedBet.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {betPercentage}% of ${bankroll.toFixed(0)} bankroll
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            <div className="bg-white bg-opacity-70 rounded-lg p-2 text-center">
+              <div className="text-xs text-gray-500">Implied Prob.</div>
+              <div className="text-sm font-bold text-gray-900">{(impliedProb * 100).toFixed(1)}%</div>
+            </div>
+            <div className="bg-white bg-opacity-70 rounded-lg p-2 text-center">
+              <div className="text-xs text-gray-500">Your Win Prob.</div>
+              <div className="text-sm font-bold text-gray-900">
+                {hasUserProb ? `${(winProbability * 100).toFixed(1)}%` : '—'}
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-70 rounded-lg p-2 text-center">
+              <div className="text-xs text-gray-500">Your Edge</div>
+              <div className={`text-sm font-bold ${edge !== undefined ? (edge > 0 ? 'text-green-700' : 'text-red-700') : 'text-gray-900'}`}>
+                {edge !== undefined ? `${edge > 0 ? '+' : ''}${(edge * 100).toFixed(1)}%` : '—'}
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-70 rounded-lg p-2 text-center">
+              <div className="text-xs text-gray-500">Expected Value</div>
+              <div className={`text-sm font-bold ${ev ? (ev.isPositiveEv ? 'text-green-700' : 'text-red-700') : 'text-gray-900'}`}>
+                {ev ? `${ev.ev > 0 ? '+' : ''}$${ev.ev.toFixed(2)}` : '—'}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
