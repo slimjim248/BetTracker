@@ -5,6 +5,8 @@ import BetList from '../components/betting/BetList';
 import BettingStats from '../components/betting/BettingStats';
 import OddsCalculator from '../components/betting/OddsCalculator';
 import StrategyRecommendations from '../components/betting/StrategyRecommendations';
+import PerformanceBreakdown from '../components/betting/PerformanceBreakdown';
+import BankrollChart from '../components/betting/BankrollChart';
 import LiveMatchups from '../components/betting/LiveMatchups';
 import type { BetType, Sport } from '../types';
 
@@ -184,6 +186,8 @@ export default function SportsBetting() {
         {activeTab === 'strategy' && (
           <div className="space-y-6">
             <StrategyRecommendations prefilledOdds={selectedOdds} />
+            <BankrollChart />
+            <PerformanceBreakdown />
           </div>
         )}
 
