@@ -12,6 +12,7 @@ type TabType = 'overview' | 'calculator' | 'strategy';
 
 export default function SportsBetting() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [selectedOdds, setSelectedOdds] = useState<number | undefined>();
   const [selectedGameData, setSelectedGameData] = useState<{
     description: string;
     teams: string;
@@ -29,6 +30,7 @@ export default function SportsBetting() {
     betType: BetType;
   }) => {
     setSelectedGameData(gameData);
+    setSelectedOdds(gameData.odds);
   };
 
   const tabs = [
@@ -129,7 +131,7 @@ export default function SportsBetting() {
 
         {activeTab === 'calculator' && (
           <div className="space-y-6">
-            <OddsCalculator />
+            <OddsCalculator prefilledOdds={selectedOdds} />
 
             {/* Quick Reference Card */}
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg shadow-sm border-2 border-indigo-200 p-6">
@@ -181,7 +183,7 @@ export default function SportsBetting() {
 
         {activeTab === 'strategy' && (
           <div className="space-y-6">
-            <StrategyRecommendations />
+            <StrategyRecommendations prefilledOdds={selectedOdds} />
           </div>
         )}
 

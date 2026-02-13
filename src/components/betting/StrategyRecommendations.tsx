@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lightbulb, AlertTriangle, CheckCircle, Info, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
 import { useBets, useBettingStats, oddsToImpliedProbability } from '../../hooks/useBets';
 import { getAllRecommendations, calculateExpectedValue } from '../../utils/bettingStrategies';
@@ -24,11 +24,21 @@ const RISK_LEVEL_CONFIG = {
   },
 };
 
-export default function StrategyRecommendations() {
+interface StrategyRecommendationsProps {
+  prefilledOdds?: number;
+}
+
+export default function StrategyRecommendations({ prefilledOdds }: StrategyRecommendationsProps) {
   const [bankroll, setBankroll] = useState<string>('1000');
   const [odds, setOdds] = useState<string>('-110');
   const [winProbability, setWinProbability] = useState<string>('');
   const [confidence, setConfidence] = useState<number>(3);
+
+  useEffect(() => {
+    if (prefilledOdds !== undefined) {
+      setOdds(String(prefilledOdds));
+    }
+  }, [prefilledOdds]);
 
   const { bets } = useBets();
   const stats = useBettingStats();

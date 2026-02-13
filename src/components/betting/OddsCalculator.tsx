@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calculator, TrendingUp, Percent } from 'lucide-react';
 import {
   calculatePayout,
@@ -7,10 +7,20 @@ import {
 } from '../../hooks/useBets';
 import { calculateExpectedValue } from '../../utils/bettingStrategies';
 
-export default function OddsCalculator() {
+interface OddsCalculatorProps {
+  prefilledOdds?: number;
+}
+
+export default function OddsCalculator({ prefilledOdds }: OddsCalculatorProps) {
   const [stake, setStake] = useState<string>('100');
   const [odds, setOdds] = useState<string>('-110');
   const [winProbability, setWinProbability] = useState<string>('');
+
+  useEffect(() => {
+    if (prefilledOdds !== undefined) {
+      setOdds(String(prefilledOdds));
+    }
+  }, [prefilledOdds]);
 
   const stakeNum = parseFloat(stake) || 0;
   const oddsNum = parseFloat(odds) || 0;
